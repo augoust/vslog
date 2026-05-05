@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="config.js"></script>
 <style>
   :root {
     --bg: #0d0f14;
@@ -357,7 +358,7 @@
   <nav>
     <button class="active" onclick="showPanel('check-in')">Check In</button>
     <button onclick="showPanel('log')">Log</button>
-    <button onclick="showPanel('settings')">Settings</button>
+    <button onclick="showPanel('data')">Data</button>
   </nav>
 
   <!-- ═══════════════════════════════════════════
@@ -483,73 +484,36 @@
   </div>
 
   <!-- ═══════════════════════════════════════════
-       PANEL: SETTINGS
+       PANEL: DATA
   ═══════════════════════════════════════════ -->
-  <div id="panel-settings" class="panel">
+  <div id="panel-data" class="panel">
     <div class="settings-card">
-      <div class="form-section-title">Supabase Database</div>
+      <div class="form-section-title">Connection</div>
       <div class="settings-row">
         <div>
-          <div class="settings-key">Project URL</div>
-          <div class="settings-desc">Your Supabase project URL</div>
+          <div class="settings-key">Supabase URL</div>
+          <div class="settings-desc">Loaded from config.js</div>
         </div>
-        <input type="text" class="settings-input" id="cfgUrl" placeholder="https://xxxx.supabase.co">
+        <div class="settings-val" id="cfgUrlDisplay">—</div>
       </div>
       <div class="settings-row">
         <div>
-          <div class="settings-key">Anon Key</div>
-          <div class="settings-desc">Public (anon) API key</div>
+          <div class="settings-key">Table</div>
+          <div class="settings-desc">Target table name</div>
         </div>
-        <input type="text" class="settings-input" id="cfgKey" placeholder="eyJ…">
-      </div>
-      <div class="settings-row">
-        <div>
-          <div class="settings-key">Table Name</div>
-          <div class="settings-desc">Supabase table for visits</div>
-        </div>
-        <input type="text" class="settings-input" id="cfgTable" placeholder="visits" value="visits">
+        <div class="settings-val" id="cfgTableDisplay">—</div>
       </div>
       <div class="settings-row">
         <div>
           <div class="settings-key">Location</div>
-          <div class="settings-desc">Building / Gate identifier</div>
+          <div class="settings-desc">Building / gate label</div>
         </div>
-        <input type="text" class="settings-input" id="cfgLocation" placeholder="Main Entrance">
+        <div class="settings-val" id="cfgLocationDisplay">—</div>
       </div>
       <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="saveConfig()">Save Config</button>
         <button class="btn btn-outline btn-sm" onclick="testConnection()">Test Connection</button>
         <button class="btn btn-outline btn-sm" onclick="syncQueue()">Sync Offline Queue</button>
       </div>
-    </div>
-
-    <div class="settings-card">
-      <div class="form-section-title">Database Setup</div>
-      <p style="font-size:0.82rem;color:var(--text2);margin-bottom:14px;line-height:1.6">
-        Run this SQL in your Supabase SQL editor to create the required table:
-      </p>
-      <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--font-mono);font-size:0.72rem;color:var(--accent2);overflow-x:auto;line-height:1.7">CREATE TABLE visits (
-  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  name        text NOT NULL,
-  soundex     text,
-  metaphone   text,
-  badge_id    text,
-  host        text,
-  reason      text,
-  notes       text,
-  location    text,
-  signature   text,
-  time_in     timestamptz DEFAULT now(),
-  time_out    timestamptz,
-  created_at  timestamptz DEFAULT now()
-);
-
--- Enable Row Level Security (optional but recommended)
--- ALTER TABLE visits ENABLE ROW LEVEL SECURITY;
--- CREATE POLICY "anon read/write" ON visits FOR ALL TO anon USING (true);</pre>
-      <p style="font-size:0.75rem;color:var(--text3);margin-top:10px">
-        💡 Export CSV anytime: Supabase Dashboard → Table Editor → visits → Export
-      </p>
     </div>
 
     <div class="settings-card">
@@ -606,6 +570,18 @@
 <div id="toast"></div>
 
 <script>
+// ════════════════════════════════════════════════
+// UUID — works on HTTP (no secure context needed)
+// ════════════════════════════════════════════════
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Fallback: RFC-4122 v4 using Math.random
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
 // ════════════════════════════════════════════════
 // PHONETIC ENCODING (Soundex + Double Metaphone lite)
 // ════════════════════════════════════════════════
@@ -733,22 +709,26 @@ function dbClear(store) {
 // ════════════════════════════════════════════════
 // CONFIG
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// CONFIG  — loaded from config.js
+// ════════════════════════════════════════════════
 let config = {};
 function loadConfig() {
-  try { config = JSON.parse(localStorage.getItem('vlConfig') || '{}'); } catch(e) { config = {}; }
-  document.getElementById('cfgUrl').value = config.url || '';
-  document.getElementById('cfgKey').value = config.key || '';
-  document.getElementById('cfgTable').value = config.table || 'visits';
-  document.getElementById('cfgLocation').value = config.location || '';
-}
-function saveConfig() {
-  config.url      = document.getElementById('cfgUrl').value.trim();
-  config.key      = document.getElementById('cfgKey').value.trim();
-  config.table    = document.getElementById('cfgTable').value.trim() || 'visits';
-  config.location = document.getElementById('cfgLocation').value.trim();
-  localStorage.setItem('vlConfig', JSON.stringify(config));
-  toast('Configuration saved');
-  updateSyncStatus();
+  const c = window.VISITOR_CONFIG || {};
+  config = {
+    url:      (c.url      || '').replace(/\/$/, ''),
+    key:      c.key      || '',
+    table:    c.table    || 'visits',
+    location: c.location || '',
+  };
+  // Show read-only values in the Data panel
+  const short = config.url ? config.url.replace('https://', '').split('.')[0] + '.supabase.co' : '—';
+  const urlEl = document.getElementById('cfgUrlDisplay');
+  const tblEl = document.getElementById('cfgTableDisplay');
+  const locEl = document.getElementById('cfgLocationDisplay');
+  if (urlEl) urlEl.textContent = config.url ? short : 'Not set';
+  if (tblEl) tblEl.textContent = config.table || '—';
+  if (locEl) locEl.textContent = config.location || '—';
 }
 
 // ════════════════════════════════════════════════
@@ -1160,8 +1140,8 @@ function showPanel(name) {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   event.currentTarget.classList.add('active');
-  if (name === 'log') { renderLog(); renderStats(); }
-  if (name === 'settings') { updateQueueBadge(); }
+  if (name === 'log')  { renderLog(); renderStats(); }
+  if (name === 'data') { loadConfig(); updateQueueBadge(); }
 }
 
 // ════════════════════════════════════════════════
