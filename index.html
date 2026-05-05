@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>VisitorLog</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161a23;
+    --surface2: #1e2330;
+    --border: #2a3040;
+    --accent: #e8c97a;
+    --accent2: #7ab8e8;
+    --danger: #e87a7a;
+    --success: #7ae8a8;
+    --text: #e8e4d9;
+    --text2: #8a91a0;
+    --text3: #5a6070;
+    --font-display: 'Playfair Display', serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 12px;
+    --shadow: 0 4px 32px rgba(0,0,0,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(232,201,122,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,201,122,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  #app { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 16px 80px; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 28px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+  .logo h1 {
+    font-family: var(--font-display);
+    font-size: 1.6rem; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--accent); }
+  .header-meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text2); text-align: right; }
+  .sync-indicator { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+  .sync-dot.offline { background: var(--danger); }
+  .sync-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
+
+  /* ── NAV TABS ── */
+  nav {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    background: var(--surface); border-radius: var(--radius);
+    padding: 4px; border: 1px solid var(--border);
+  }
+  nav button {
+    flex: 1; padding: 10px 8px;
+    background: transparent; border: none; border-radius: 9px;
+    color: var(--text2); font-family: var(--font-body);
+    font-size: 0.82rem; font-weight: 500; cursor: pointer;
+    transition: all 0.2s; letter-spacing: 0.02em;
+  }
+  nav button.active {
+    background: var(--surface2); color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  nav button:hover:not(.active) { color: var(--text); }
+
+  /* ── PANELS ── */
+  .panel { display: none; animation: fadeUp 0.25s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── FORM ── */
+  .form-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .form-section-title {
+    font-family: var(--font-mono); font-size: 0.68rem;
+    color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .field { margin-bottom: 16px; }
+  label {
+    display: block; font-size: 0.78rem; font-weight: 500;
+    color: var(--text2); margin-bottom: 6px; letter-spacing: 0.03em;
+  }
+  input, select, textarea {
+    width: 100%; padding: 11px 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: var(--font-body); font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(232,201,122,0.12);
+  }
+  select option { background: var(--surface); }
+  textarea { min-height: 72px; resize: vertical; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:560px) { .row { grid-template-columns: 1fr; } }
+
+  /* autocomplete suggestions */
+  .suggest-wrap { position: relative; }
+  .suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .suggestion-item {
+    padding: 10px 14px; cursor: pointer; font-size: 0.88rem;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border); transition: background 0.15s;
+  }
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-item:hover { background: var(--surface); }
+  .suggest-badge {
+    font-family: var(--font-mono); font-size: 0.65rem;
+    background: var(--surface); color: var(--text3);
+    padding: 2px 6px; border-radius: 4px;
+  }
+
+  /* ── SIGNATURE PAD ── */
+  .sig-wrap {
+    border: 1px dashed var(--border); border-radius: 8px;
+    background: var(--bg); position: relative; overflow: hidden;
+  }
+  #sigCanvas {
+    display: block; width: 100%; touch-action: none;
+    cursor: crosshair;
+  }
+  .sig-label {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    color: var(--text3); font-size: 0.78rem; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .sig-actions {
+    display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 18px; border-radius: 8px; border: none;
+    font-family: var(--font-body); font-size: 0.85rem; font-weight: 500;
+    cursor: pointer; transition: all 0.18s; letter-spacing: 0.02em;
+  }
+  .btn-primary {
+    background: var(--accent); color: #0d0f14;
+    box-shadow: 0 2px 16px rgba(232,201,122,0.25);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(232,201,122,0.35); }
+  .btn-outline { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--text2); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(232,122,122,0.3); }
+  .btn-danger:hover { background: rgba(232,122,122,0.1); }
+  .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+  .btn-full { width: 100%; justify-content: center; padding: 13px; font-size: 0.95rem; }
+
+  /* ── LOG TABLE ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .search-wrap { flex: 1; min-width: 180px; }
+  .search-wrap input { margin: 0; }
+
+  .stats-row {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 18px;
+  }
+  .stat-label { font-size: 0.7rem; color: var(--text3); font-family: var(--font-mono); letter-spacing: 0.08em; }
+  .stat-value { font-size: 1.6rem; font-family: var(--font-display); font-weight: 700; margin-top: 2px; }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.blue { color: var(--accent2); }
+  .stat-value.green { color: var(--success); }
+
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  thead th {
+    padding: 11px 14px; text-align: left;
+    font-family: var(--font-mono); font-size: 0.65rem;
+    color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border); background: var(--bg);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 11px 14px; vertical-align: middle; }
+  td .name { font-weight: 500; }
+  td .reason { color: var(--text2); font-size: 0.78rem; }
+  td .time { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text2); }
+  td .badge {
+    display: inline-block; padding: 3px 8px; border-radius: 100px;
+    font-size: 0.68rem; font-family: var(--font-mono); letter-spacing: 0.05em;
+  }
+  .badge-in  { background: rgba(122,232,168,0.1); color: var(--success); border: 1px solid rgba(122,232,168,0.25); }
+  .badge-out { background: rgba(232,122,122,0.1); color: var(--danger);  border: 1px solid rgba(232,122,122,0.25); }
+  .badge-pending { background: rgba(232,201,122,0.1); color: var(--accent); border: 1px solid rgba(232,201,122,0.25); }
+
+  td .sig-thumb {
+    width: 60px; height: 30px; object-fit: contain;
+    border-radius: 4px; border: 1px solid var(--border);
+    background: #fff; cursor: pointer;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px; max-width: 560px; width: 100%;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    transform: scale(0.96); transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal-title {
+    font-family: var(--font-display); font-size: 1.3rem;
+    margin-bottom: 20px; display: flex; align-items: center;
+    justify-content: space-between;
+  }
+  .modal img { max-width: 100%; border-radius: 8px; background: #fff; }
+
+  /* ── SETTINGS ── */
+  .settings-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+  }
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-key { font-size: 0.85rem; font-weight: 500; }
+  .settings-desc { font-size: 0.75rem; color: var(--text3); margin-top: 2px; }
+  .settings-val { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); }
+
+  input[type=text].settings-input {
+    width: 220px; padding: 7px 10px; font-size: 0.82rem;
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 100px;
+    padding: 10px 20px; font-size: 0.85rem;
+    box-shadow: var(--shadow); z-index: 200;
+    transition: transform 0.3s ease;
+    pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── OFFLINE QUEUE BADGE ── */
+  .queue-badge {
+    display: inline-block; background: var(--accent); color: #0d0f14;
+    border-radius: 100px; font-size: 0.65rem; font-weight: 700;
+    padding: 1px 6px; margin-left: 6px;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center; padding: 48px 20px; color: var(--text3);
+  }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+  .empty p { font-size: 0.88rem; }
+
+  /* ── TIME OUT FORM ── */
+  .timeout-row td { background: rgba(232,201,122,0.04); }
+  .btn-timeout {
+    background: transparent; border: 1px solid var(--accent);
+    color: var(--accent); border-radius: 6px; padding: 4px 10px;
+    font-size: 0.72rem; cursor: pointer; transition: all 0.15s;
+    font-family: var(--font-mono);
+  }
+  .btn-timeout:hover { background: var(--accent); color: #0d0f14; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      <h1>Visitor<span>Log</span></h1>
+    </div>
+    <div class="header-meta">
+      <div id="clockDisplay">--:-- --</div>
+      <div class="sync-indicator">
+        <div class="sync-dot" id="syncDot"></div>
+        <span id="syncLabel">Offline</span>
+        <span id="queueCount"></span>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <button class="active" onclick="showPanel('check-in')">Check In</button>
+    <button onclick="showPanel('log')">Log</button>
+    <button onclick="showPanel('settings')">Settings</button>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════
+       PANEL: CHECK IN
+  ═══════════════════════════════════════════ -->
+  <div id="panel-check-in" class="panel active">
+    <div class="form-card">
+      <div class="form-section-title">New Visit</div>
+
+      <div class="row">
+        <div class="field">
+          <label>Full Name *</label>
+          <div class="suggest-wrap">
+            <input type="text" id="visitorName" placeholder="e.g. Maria Papadopoulos" autocomplete="off">
+            <div class="suggestions" id="nameSuggestions" style="display:none"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>ID / Badge No.</label>
+          <input type="text" id="visitorId" placeholder="Optional">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Host / Department *</label>
+          <input type="text" id="visitorHost" placeholder="e.g. HR, Room 204…">
+        </div>
+        <div class="field">
+          <label>Reason for Visit *</label>
+          <select id="visitorReason">
+            <option value="">— Select —</option>
+            <option>Meeting</option>
+            <option>Delivery</option>
+            <option>Interview</option>
+            <option>Maintenance</option>
+            <option>Contractor</option>
+            <option>Personal</option>
+            <option>Government / Authority</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" id="otherReasonField" style="display:none">
+        <label>Specify Reason</label>
+        <input type="text" id="otherReason" placeholder="Describe reason…">
+      </div>
+
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="visitorNotes" placeholder="Any extra details…"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Visitor Signature *</label>
+        <div class="sig-wrap">
+          <canvas id="sigCanvas" height="140"></canvas>
+          <div class="sig-label" id="sigLabel">Sign here with finger or mouse</div>
+        </div>
+        <div class="sig-actions">
+          <button class="btn btn-outline btn-sm" onclick="clearSig()">Clear</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="submitCheckIn()">
+        ✦ Record Check-In
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       PANEL: LOG
+  ═══════════════════════════════════════════ -->
+  <div id="panel-log" class="panel">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Today</div>
+        <div class="stat-value accent" id="statToday">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Inside Now</div>
+        <div class="stat-value blue" id="statInside">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total</div>
+        <div class="stat-value green" id="statTotal">0</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Search name, reason, host… (phonetic)" oninput="renderLog()">
+      </div>
+      <select id="filterStatus" onchange="renderLog()" style="width:auto;padding:11px 10px;">
+        <option value="">All</option>
+        <option value="in">Inside</option>
+        <option value="out">Checked Out</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Host</th>
+            <th>Reason</th>
+            <th>In</th>
+            <th>Out</th>
+            <th>Sig</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+      <div class="empty" id="emptyState" style="display:none">
+        <div class="empty-icon">📋</div>
+        <p>No visitors found</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       PANEL: SETTINGS
+  ═══════════════════════════════════════════ -->
+  <div id="panel-settings" class="panel">
+    <div class="settings-card">
+      <div class="form-section-title">Supabase Database</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-key">Project URL</div>
+          <div class="settings-desc">Your Supabase project URL</div>
+        </div>
+        <input type="text" class="settings-input" id="cfgUrl" placeholder="https://xxxx.supabase.co">
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-key">Anon Key</div>
+          <div class="settings-desc">Public (anon) API key</div>
+        </div>
+        <input type="text" class="settings-input" id="cfgKey" placeholder="eyJ…">
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-key">Table Name</div>
+          <div class="settings-desc">Supabase table for visits</div>
+        </div>
+        <input type="text" class="settings-input" id="cfgTable" placeholder="visits" value="visits">
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-key">Location</div>
+          <div class="settings-desc">Building / Gate identifier</div>
+        </div>
+        <input type="text" class="settings-input" id="cfgLocation" placeholder="Main Entrance">
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="saveConfig()">Save Config</button>
+        <button class="btn btn-outline btn-sm" onclick="testConnection()">Test Connection</button>
+        <button class="btn btn-outline btn-sm" onclick="syncQueue()">Sync Offline Queue</button>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="form-section-title">Database Setup</div>
+      <p style="font-size:0.82rem;color:var(--text2);margin-bottom:14px;line-height:1.6">
+        Run this SQL in your Supabase SQL editor to create the required table:
+      </p>
+      <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--font-mono);font-size:0.72rem;color:var(--accent2);overflow-x:auto;line-height:1.7">CREATE TABLE visits (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name        text NOT NULL,
+  soundex     text,
+  metaphone   text,
+  badge_id    text,
+  host        text,
+  reason      text,
+  notes       text,
+  location    text,
+  signature   text,
+  time_in     timestamptz DEFAULT now(),
+  time_out    timestamptz,
+  created_at  timestamptz DEFAULT now()
+);
+
+-- Enable Row Level Security (optional but recommended)
+-- ALTER TABLE visits ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY "anon read/write" ON visits FOR ALL TO anon USING (true);</pre>
+      <p style="font-size:0.75rem;color:var(--text3);margin-top:10px">
+        💡 Export CSV anytime: Supabase Dashboard → Table Editor → visits → Export
+      </p>
+    </div>
+
+    <div class="settings-card">
+      <div class="form-section-title">Local Data</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-key">Offline queue</div>
+          <div class="settings-desc">Records pending sync</div>
+        </div>
+        <div class="settings-val" id="queueCountSetting">0 records</div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-key">Local records</div>
+          <div class="settings-desc">Stored in IndexedDB</div>
+        </div>
+        <div class="settings-val" id="localCountSetting">0 records</div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export Local CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="clearLocalData()">Clear Local Data</button>
+      </div>
+    </div>
+  </div>
+</div><!-- /app -->
+
+<!-- ── SIGNATURE MODAL ── -->
+<div class="modal-overlay" id="sigModal">
+  <div class="modal">
+    <div class="modal-title">
+      Visitor Signature
+      <button class="btn btn-outline btn-sm" onclick="closeSigModal()">Close</button>
+    </div>
+    <img id="sigModalImg" src="" alt="Signature">
+  </div>
+</div>
+
+<!-- ── TIMEOUT MODAL ── -->
+<div class="modal-overlay" id="timeoutModal">
+  <div class="modal">
+    <div class="modal-title">
+      Record Check-Out
+      <button class="btn btn-outline btn-sm" onclick="closeTimeoutModal()">Cancel</button>
+    </div>
+    <p style="font-size:0.85rem;color:var(--text2);margin-bottom:16px">
+      Confirm check-out for <strong id="timeoutName"></strong>?
+    </p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary btn-full" onclick="confirmCheckOut()">✓ Confirm Check-Out</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+// PHONETIC ENCODING (Soundex + Double Metaphone lite)
+// ════════════════════════════════════════════════
+function soundex(name) {
+  if (!name) return '';
+  name = name.toUpperCase().replace(/[^A-Z]/g, '');
+  if (!name) return '';
+  const map = {B:1,F:1,P:1,V:1,C:2,G:2,J:2,K:2,Q:2,S:2,X:2,Z:2,D:3,T:3,L:4,M:5,N:5,R:6};
+  let code = name[0];
+  let prev = map[name[0]] || 0;
+  for (let i = 1; i < name.length && code.length < 4; i++) {
+    const c = map[name[i]] || 0;
+    if (c && c !== prev) { code += c; }
+    prev = c;
+  }
+  return code.padEnd(4,'0');
+}
+
+function metaphone(name) {
+  // Simplified metaphone for searchability
+  if (!name) return '';
+  let s = name.toUpperCase().replace(/[^A-Z]/g,'');
+  s = s.replace(/^AE|^GN|^KN|^PN|^WR/, m => m[1]);
+  s = s.replace(/MB$/, 'M');
+  s = s.replace(/CK/g,'K').replace(/SCH/g,'SK').replace(/PH/g,'F')
+        .replace(/QU/g,'KW').replace(/TH/g,'0').replace(/[AEIOU]/g,'')
+        .replace(/[HWY]/g,'').replace(/(.)\1+/g,'$1');
+  return s.substring(0, 6);
+}
+
+function phoneticKey(name) {
+  const parts = name.trim().split(/\s+/);
+  return parts.map(p => soundex(p) + metaphone(p)).join('|');
+}
+
+function phoneticMatch(query, record) {
+  if (!query) return true;
+  query = query.toLowerCase();
+  const qKey = phoneticKey(query);
+
+  // Direct text match
+  const fields = [record.name, record.host, record.reason, record.badge_id, record.notes].filter(Boolean).join(' ').toLowerCase();
+  if (fields.includes(query)) return true;
+
+  // Phonetic match on name
+  const rKey = record.soundex || '';
+  const rMeta = record.metaphone || '';
+  const qSdx = soundex(query);
+  const qMeta = metaphone(query);
+
+  if (rKey.includes(qSdx) || rMeta.includes(qMeta)) return true;
+  if (qKey.split('|').some(k => rKey.includes(k.substring(0,4)))) return true;
+
+  return false;
+}
+
+// ════════════════════════════════════════════════
+// INDEXEDDB
+// ════════════════════════════════════════════════
+let db;
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('VisitorLogDB', 2);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('visits')) {
+        const s = d.createObjectStore('visits', { keyPath: 'id' });
+        s.createIndex('time_in', 'time_in');
+        s.createIndex('soundex', 'soundex');
+      }
+      if (!d.objectStoreNames.contains('queue')) {
+        d.createObjectStore('queue', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbGet(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbPut(store, val) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).put(val);
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbGetAll(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbDelete(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).delete(key);
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function dbClear(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).clear();
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+// ════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════
+let config = {};
+function loadConfig() {
+  try { config = JSON.parse(localStorage.getItem('vlConfig') || '{}'); } catch(e) { config = {}; }
+  document.getElementById('cfgUrl').value = config.url || '';
+  document.getElementById('cfgKey').value = config.key || '';
+  document.getElementById('cfgTable').value = config.table || 'visits';
+  document.getElementById('cfgLocation').value = config.location || '';
+}
+function saveConfig() {
+  config.url      = document.getElementById('cfgUrl').value.trim();
+  config.key      = document.getElementById('cfgKey').value.trim();
+  config.table    = document.getElementById('cfgTable').value.trim() || 'visits';
+  config.location = document.getElementById('cfgLocation').value.trim();
+  localStorage.setItem('vlConfig', JSON.stringify(config));
+  toast('Configuration saved');
+  updateSyncStatus();
+}
+
+// ════════════════════════════════════════════════
+// SUPABASE API
+// ════════════════════════════════════════════════
+async function supabaseInsert(record) {
+  if (!config.url || !config.key) throw new Error('No config');
+  const res = await fetch(`${config.url}/rest/v1/${config.table}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': config.key,
+      'Authorization': `Bearer ${config.key}`,
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(record)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function supabasePatch(id, data) {
+  if (!config.url || !config.key) throw new Error('No config');
+  const res = await fetch(`${config.url}/rest/v1/${config.table}?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': config.key,
+      'Authorization': `Bearer ${config.key}`
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+async function supabaseFetchAll() {
+  if (!config.url || !config.key) return null;
+  const res = await fetch(`${config.url}/rest/v1/${config.table}?order=time_in.desc&limit=1000`, {
+    headers: {
+      'apikey': config.key,
+      'Authorization': `Bearer ${config.key}`
+    }
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// ════════════════════════════════════════════════
+// SYNC
+// ════════════════════════════════════════════════
+let isOnline = navigator.onLine;
+
+async function syncQueue() {
+  const queue = await dbGetAll('queue');
+  if (!queue.length) { toast('Queue is empty'); return; }
+  let synced = 0;
+  for (const item of queue) {
+    try {
+      if (item.type === 'insert') await supabaseInsert(item.data);
+      if (item.type === 'update') await supabasePatch(item.id, item.data);
+      await dbDelete('queue', item.id);
+      synced++;
+    } catch(e) { console.warn('Sync fail:', e); }
+  }
+  toast(`Synced ${synced}/${queue.length} records`);
+  updateQueueBadge();
+}
+
+async function updateQueueBadge() {
+  const queue = await dbGetAll('queue');
+  const n = queue.length;
+  const el = document.getElementById('queueCount');
+  el.innerHTML = n ? `<span class="queue-badge">${n}</span>` : '';
+  document.getElementById('queueCountSetting').textContent = n + ' records';
+  const visits = await dbGetAll('visits');
+  document.getElementById('localCountSetting').textContent = visits.length + ' records';
+}
+
+function updateSyncStatus() {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  if (!isOnline) {
+    dot.className = 'sync-dot offline';
+    lbl.textContent = 'Offline';
+  } else if (config.url && config.key) {
+    dot.className = 'sync-dot';
+    lbl.textContent = 'Supabase';
+  } else {
+    dot.className = 'sync-dot offline';
+    lbl.textContent = 'Local only';
+  }
+}
+
+window.addEventListener('online',  () => { isOnline = true;  updateSyncStatus(); syncQueue(); });
+window.addEventListener('offline', () => { isOnline = false; updateSyncStatus(); });
+
+async function testConnection() {
+  try {
+    const res = await fetch(`${config.url}/rest/v1/${config.table}?limit=1`, {
+      headers: { 'apikey': config.key, 'Authorization': `Bearer ${config.key}` }
+    });
+    if (res.ok) toast('✓ Connection successful');
+    else toast('✗ Error: ' + res.status);
+  } catch(e) { toast('✗ Cannot reach Supabase'); }
+}
+
+// ════════════════════════════════════════════════
+// SIGNATURE PAD
+// ════════════════════════════════════════════════
+let sigPad = { drawing: false, hasData: false };
+let canvas, ctx;
+
+function initSigPad() {
+  canvas = document.getElementById('sigCanvas');
+  ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 140 * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.strokeStyle = '#e8e4d9';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const pos = e => {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return [(src.clientX - r.left), (src.clientY - r.top)];
+  };
+
+  canvas.addEventListener('mousedown',  e => { sigPad.drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(...p); });
+  canvas.addEventListener('mousemove',  e => { if (!sigPad.drawing) return; ctx.lineTo(...pos(e)); ctx.stroke(); sigPad.hasData = true; document.getElementById('sigLabel').style.opacity = 0; });
+  canvas.addEventListener('mouseup',    () => { sigPad.drawing = false; });
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); sigPad.drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(...p); }, { passive: false });
+  canvas.addEventListener('touchmove',  e => { e.preventDefault(); if (!sigPad.drawing) return; ctx.lineTo(...pos(e)); ctx.stroke(); sigPad.hasData = true; document.getElementById('sigLabel').style.opacity = 0; }, { passive: false });
+  canvas.addEventListener('touchend',   () => { sigPad.drawing = false; });
+}
+
+function clearSig() {
+  ctx.clearRect(0, 0, canvas.width/devicePixelRatio, canvas.height/devicePixelRatio);
+  sigPad.hasData = false;
+  document.getElementById('sigLabel').style.opacity = 1;
+}
+
+function getSigDataURL() {
+  if (!sigPad.hasData) return null;
+  return canvas.toDataURL('image/png');
+}
+
+// ════════════════════════════════════════════════
+// NAME AUTOCOMPLETE
+// ════════════════════════════════════════════════
+let knownVisitors = [];
+
+async function loadKnownVisitors() {
+  const all = await dbGetAll('visits');
+  const map = {};
+  all.forEach(v => {
+    const key = v.name.toLowerCase();
+    if (!map[key]) map[key] = { name: v.name, count: 0, soundex: v.soundex, metaphone: v.metaphone };
+    map[key].count++;
+  });
+  knownVisitors = Object.values(map).sort((a,b) => b.count - a.count);
+}
+
+document.getElementById('visitorName').addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  const box = document.getElementById('nameSuggestions');
+  if (!q || q.length < 2) { box.style.display = 'none'; return; }
+
+  const matches = knownVisitors.filter(v => {
+    return v.name.toLowerCase().includes(q) ||
+           (v.soundex && v.soundex.includes(soundex(q))) ||
+           (v.metaphone && v.metaphone.includes(metaphone(q)));
+  }).slice(0, 5);
+
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.innerHTML = matches.map(v =>
+    `<div class="suggestion-item" onclick="selectName('${v.name.replace(/'/g,"\\'")}')">
+      ${v.name}
+      <span class="suggest-badge">${v.count}×</span>
+    </div>`
+  ).join('');
+  box.style.display = 'block';
+});
+
+document.getElementById('visitorName').addEventListener('blur', () => {
+  setTimeout(() => document.getElementById('nameSuggestions').style.display = 'none', 150);
+});
+
+function selectName(name) {
+  document.getElementById('visitorName').value = name;
+  document.getElementById('nameSuggestions').style.display = 'none';
+}
+
+// ════════════════════════════════════════════════
+// REASON SELECT
+// ════════════════════════════════════════════════
+document.getElementById('visitorReason').addEventListener('change', function() {
+  document.getElementById('otherReasonField').style.display = this.value === 'Other' ? 'block' : 'none';
+});
+
+// ════════════════════════════════════════════════
+// CHECK IN
+// ════════════════════════════════════════════════
+async function submitCheckIn() {
+  const name   = document.getElementById('visitorName').value.trim();
+  const reason = document.getElementById('visitorReason').value;
+  const host   = document.getElementById('visitorHost').value.trim();
+  if (!name)   { toast('⚠ Please enter a name'); return; }
+  if (!reason) { toast('⚠ Please select a reason'); return; }
+  if (!host)   { toast('⚠ Please enter a host/department'); return; }
+  if (!sigPad.hasData) { toast('⚠ Signature required'); return; }
+
+  const finalReason = reason === 'Other'
+    ? (document.getElementById('otherReason').value.trim() || 'Other')
+    : reason;
+
+  const record = {
+    id:        crypto.randomUUID(),
+    name,
+    soundex:   name.split(/\s+/).map(soundex).join('|'),
+    metaphone: name.split(/\s+/).map(metaphone).join('|'),
+    badge_id:  document.getElementById('visitorId').value.trim(),
+    host,
+    reason:    finalReason,
+    notes:     document.getElementById('visitorNotes').value.trim(),
+    location:  config.location || '',
+    signature: getSigDataURL(),
+    time_in:   new Date().toISOString(),
+    time_out:  null
+  };
+
+  // Save locally
+  await dbPut('visits', record);
+
+  // Try Supabase
+  if (isOnline && config.url && config.key) {
+    try {
+      const payload = { ...record };
+      delete payload.id; // let supabase generate or include it
+      payload.id = record.id;
+      await supabaseInsert(payload);
+    } catch(e) {
+      // Queue for later
+      await dbPut('queue', { id: record.id + '_ins', type: 'insert', data: record });
+      toast('Saved locally (will sync when online)');
+    }
+  } else {
+    await dbPut('queue', { id: record.id + '_ins', type: 'insert', data: record });
+  }
+
+  // Reset form
+  document.getElementById('visitorName').value = '';
+  document.getElementById('visitorId').value = '';
+  document.getElementById('visitorHost').value = '';
+  document.getElementById('visitorReason').value = '';
+  document.getElementById('visitorNotes').value = '';
+  document.getElementById('otherReasonField').style.display = 'none';
+  clearSig();
+
+  await loadKnownVisitors();
+  await renderStats();
+  updateQueueBadge();
+  toast('✓ Check-in recorded for ' + name);
+}
+
+// ════════════════════════════════════════════════
+// CHECK OUT
+// ════════════════════════════════════════════════
+let pendingCheckOut = null;
+
+function openTimeoutModal(id, name) {
+  pendingCheckOut = id;
+  document.getElementById('timeoutName').textContent = name;
+  document.getElementById('timeoutModal').classList.add('open');
+}
+function closeTimeoutModal() {
+  document.getElementById('timeoutModal').classList.remove('open');
+  pendingCheckOut = null;
+}
+
+async function confirmCheckOut() {
+  if (!pendingCheckOut) return;
+  const record = await dbGet('visits', pendingCheckOut);
+  if (!record) return;
+  record.time_out = new Date().toISOString();
+  await dbPut('visits', record);
+
+  if (isOnline && config.url && config.key) {
+    try { await supabasePatch(record.id, { time_out: record.time_out }); }
+    catch(e) { await dbPut('queue', { id: record.id + '_upd', type: 'update', id_ref: record.id, data: { time_out: record.time_out } }); }
+  } else {
+    await dbPut('queue', { id: record.id + '_upd', type: 'update', id_ref: record.id, data: { time_out: record.time_out } });
+  }
+
+  closeTimeoutModal();
+  updateQueueBadge();
+  await renderStats();
+  renderLog();
+  toast('✓ Check-out recorded');
+}
+
+// ════════════════════════════════════════════════
+// LOG RENDER
+// ════════════════════════════════════════════════
+async function renderLog() {
+  const query  = document.getElementById('searchInput').value.trim();
+  const filter = document.getElementById('filterStatus').value;
+  let visits   = await dbGetAll('visits');
+
+  visits = visits.filter(v => phoneticMatch(query, v));
+  if (filter === 'in')  visits = visits.filter(v => !v.time_out);
+  if (filter === 'out') visits = visits.filter(v => v.time_out);
+  visits.sort((a,b) => new Date(b.time_in) - new Date(a.time_in));
+
+  const tbody = document.getElementById('logBody');
+  const empty = document.getElementById('emptyState');
+
+  if (!visits.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = visits.map(v => {
+    const inTime  = new Date(v.time_in);
+    const outTime = v.time_out ? new Date(v.time_out) : null;
+    const badge   = v.time_out ? '<span class="badge badge-out">OUT</span>' : '<span class="badge badge-in">IN</span>';
+    const sigEl   = v.signature
+      ? `<img class="sig-thumb" src="${v.signature}" onclick="showSig('${v.id}')" title="View signature">`
+      : '<span style="color:var(--text3);font-size:0.7rem">—</span>';
+    const outBtn  = !v.time_out
+      ? `<button class="btn-timeout" onclick="openTimeoutModal('${v.id}','${v.name.replace(/'/g,"\\'")}')">Check Out</button>`
+      : '';
+    return `<tr>
+      <td><div class="name">${v.name}</div>${badge}</td>
+      <td class="reason">${v.host || '—'}</td>
+      <td class="reason">${v.reason}</td>
+      <td class="time">${fmt(inTime)}</td>
+      <td class="time">${outTime ? fmt(outTime) : '<span style="color:var(--accent)">—</span>'}</td>
+      <td>${sigEl}</td>
+      <td>${outBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function fmt(d) {
+  return d.toLocaleDateString('el-GR', { day:'2-digit', month:'2-digit' }) + ' ' +
+         d.toLocaleTimeString('el-GR', { hour:'2-digit', minute:'2-digit' });
+}
+
+async function renderStats() {
+  const visits = await dbGetAll('visits');
+  const today  = new Date().toDateString();
+  document.getElementById('statTotal').textContent  = visits.length;
+  document.getElementById('statToday').textContent  = visits.filter(v => new Date(v.time_in).toDateString() === today).length;
+  document.getElementById('statInside').textContent = visits.filter(v => !v.time_out).length;
+}
+
+// ════════════════════════════════════════════════
+// SIGNATURE MODAL
+// ════════════════════════════════════════════════
+async function showSig(id) {
+  const record = await dbGet('visits', id);
+  if (!record || !record.signature) return;
+  document.getElementById('sigModalImg').src = record.signature;
+  document.getElementById('sigModal').classList.add('open');
+}
+function closeSigModal() { document.getElementById('sigModal').classList.remove('open'); }
+document.getElementById('sigModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeSigModal(); });
+document.getElementById('timeoutModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeTimeoutModal(); });
+
+// ════════════════════════════════════════════════
+// EXPORT CSV
+// ════════════════════════════════════════════════
+async function exportCSV() {
+  const visits = await dbGetAll('visits');
+  const cols = ['id','name','badge_id','host','reason','notes','location','time_in','time_out'];
+  const rows = [cols.join(',')].concat(visits.map(v =>
+    cols.map(c => `"${(v[c]||'').toString().replace(/"/g,'""')}"`).join(',')
+  ));
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `visitors_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ════════════════════════════════════════════════
+// CLEAR LOCAL DATA
+// ════════════════════════════════════════════════
+async function clearLocalData() {
+  if (!confirm('Delete ALL local visitor data? This cannot be undone.')) return;
+  await dbClear('visits');
+  await dbClear('queue');
+  knownVisitors = [];
+  renderLog();
+  renderStats();
+  updateQueueBadge();
+  toast('Local data cleared');
+}
+
+// ════════════════════════════════════════════════
+// NAV
+// ════════════════════════════════════════════════
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'log') { renderLog(); renderStats(); }
+  if (name === 'settings') { updateQueueBadge(); }
+}
+
+// ════════════════════════════════════════════════
+// CLOCK
+// ════════════════════════════════════════════════
+function updateClock() {
+  document.getElementById('clockDisplay').textContent =
+    new Date().toLocaleTimeString('el-GR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+async function init() {
+  await openDB();
+  loadConfig();
+  updateSyncStatus();
+  initSigPad();
+  await loadKnownVisitors();
+  await renderStats();
+  await updateQueueBadge();
+
+  // Auto-sync on load if online
+  if (isOnline && config.url && config.key) {
+    syncQueue();
+  }
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(console.warn);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
